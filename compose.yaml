@@ -159,7 +159,7 @@ services:
   jellyfin:
     <<: *warp-service
     group_add:
-      - 'YOUR_GID_HERE'
+      - '105'
     container_name: jellyfin
     image: jellyfin/jellyfin:latest
     devices:
