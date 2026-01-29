@@ -11,6 +11,8 @@ x-common-keys: &common-keys
       max-file: "3"
   environment: &common-env
     TZ: Europe/Istanbul
+    PUID: 0
+    PGID: 0
 
 x-warp-service: &warp-service
   restart: unless-stopped
@@ -21,6 +23,8 @@ x-warp-service: &warp-service
       max-file: "3"
   environment:
     TZ: Europe/Istanbul
+    PUID: 0
+    PGID: 0
   network_mode: "service:cloudflare-warp"
   depends_on:
     cloudflare-warp:
