@@ -148,12 +148,12 @@ services:
       TZ: Europe/Istanbul
 
 ###############################################
-# JELLYFIN - Media Server (NOT through WARP)
+# JELLYFIN - Media Server
 ###############################################
   jellyfin:
     <<: *warp-service
     group_add:
-      - video
+      - 'YOUR_GID_HERE'
     container_name: jellyfin
     image: jellyfin/jellyfin:latest
     devices:
