@@ -178,6 +178,11 @@ volumes:
   qbittorrent-config:
   jellyfin-config:
   data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/shared/media
 
 ###############################################
 # ARR Stack Dedicated Network
