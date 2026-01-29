@@ -162,8 +162,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - jellyfin-config:/config
       - data:/data:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
 ###############################################
 # Volumes
