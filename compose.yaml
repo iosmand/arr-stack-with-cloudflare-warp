@@ -1,0 +1,187 @@
+###############################################
+# Common Keys for all apps
+###############################################
+
+x-common-keys: &common-keys
+  restart: unless-stopped
+  logging:
+    driver: json-file
+  environment: &common-env
+    TZ: Europe/Istanbul
+
+x-warp-service: &warp-service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+  environment:
+    TZ: Europe/Istanbul
+  network_mode: "service:cloudflare-warp"
+  depends_on:
+    cloudflare-warp:
+      condition: service_healthy
+
+services:
+###############################################
+# CLOUDFLARE WARP - VPN Gateway
+###############################################
+  cloudflare-warp:
+    <<: *common-keys
+    build: ./cloudflare-warp
+    container_name: cloudflare-warp
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - warp-data:/var/lib/cloudflare-warp
+    # All ports for services using WARP network must be exposed here
+    ports:
+      # Radarr
+      - 7878:7878
+      # Sonarr
+      - 8989:8989
+      # Lidarr
+      - 8686:8686
+      # Bazarr
+      - 6767:6767
+      # Prowlarr
+      - 9696:9696
+      # qBittorrent
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+      # Jellyfin
+      - 8096:8096
+      - 7359:7359/udp
+      # FlareSolverr
+      - 8191:8191
+    networks:
+      - arr_network
+
+###############################################
+# RADARR - Movies
+###############################################
+  radarr:
+    <<: *warp-service
+    container_name: radarr
+    image: ghcr.io/hotio/radarr:latest
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - radarr-config:/config
+      - data:/data
+
+###############################################
+# SONARR - TV Shows
+###############################################
+  sonarr:
+    <<: *warp-service
+    container_name: sonarr
+    image: ghcr.io/hotio/sonarr:latest
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - sonarr-config:/config
+      - data:/data
+
+###############################################
+# LIDARR - Music
+###############################################
+  lidarr:
+    <<: *warp-service
+    container_name: lidarr
+    image: ghcr.io/hotio/lidarr:latest
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - lidarr-config:/config
+      - data:/data
+
+###############################################
+# BAZARR - Subtitles
+###############################################
+  bazarr:
+    <<: *warp-service
+    container_name: bazarr
+    image: ghcr.io/hotio/bazarr:latest
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - bazarr-config:/config
+      - data:/data
+
+###############################################
+# PROWLARR - Indexer Manager
+###############################################
+  prowlarr:
+    <<: *warp-service
+    container_name: prowlarr
+    image: ghcr.io/hotio/prowlarr:latest
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - prowlarr-config:/config
+
+###############################################
+# QBITTORRENT - Downloader
+###############################################
+  qbittorrent:
+    <<: *warp-service
+    container_name: qbittorrent
+    image: ghcr.io/hotio/qbittorrent:latest
+    environment:
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: 6881
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - qbittorrent-config:/config
+      - data:/data
+
+###############################################
+# FLARESOLVERR - Cloudflare Bypass
+###############################################
+  flaresolverr:
+    <<: *warp-service
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    environment:
+      LOG_LEVEL: info
+      TZ: Europe/Istanbul
+
+###############################################
+# JELLYFIN - Media Server (NOT through WARP)
+###############################################
+  jellyfin:
+    <<: *warp-service
+    group_add:
+      - video
+    container_name: jellyfin
+    image: jellyfin/jellyfin:latest
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - jellyfin-config:/config
+      - data:/data:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+###############################################
+# Volumes
+###############################################
+volumes:
+  warp-data:  
+  radarr-config:
+  sonarr-config:
+  lidarr-config:
+  bazarr-config:
+  prowlarr-config:
+  qbittorrent-config:
+  jellyfin-config:
+  data:
+
+###############################################
+# ARR Stack Dedicated Network
+###############################################
+networks:
+  arr_network:
+    name: arr_network
