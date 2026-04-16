@@ -65,6 +65,8 @@ services:
       - 7359:7359/udp
       # FlareSolverr
       - 8191:8191
+      # Seerr
+      - 5055:5055
     networks:
       - arr_network
 
@@ -154,6 +156,18 @@ services:
       TZ: Europe/Istanbul
 
 ###############################################
+# SEERR - Request Manager
+###############################################
+  seerr:
+    <<: *warp-service
+    init: true
+    container_name: seerr
+    image: ghcr.io/hotio/seerr:latest
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - seerr-config:/config
+
+###############################################
 # JELLYFIN - Media Server
 ###############################################
   jellyfin:
@@ -181,6 +195,7 @@ volumes:
   prowlarr-config:
   qbittorrent-config:
   jellyfin-config:
+  seerr-config:
   data:
     driver: local
     driver_opts:
