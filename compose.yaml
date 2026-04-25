@@ -80,7 +80,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - radarr-config:/config
-      - media:/media
+      - media:/data
 
 ###############################################
 # SONARR - TV Shows
@@ -92,7 +92,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - sonarr-config:/config
-      - media:/media
+      - media:/data
 
 ###############################################
 # LIDARR - Music
@@ -104,7 +104,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - lidarr-config:/config
-      - media:/media
+      - media:/data
 
 ###############################################
 # BAZARR - Subtitles
@@ -116,7 +116,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - bazarr-config:/config
-      - media:/media
+      - media:/data
 
 ###############################################
 # PROWLARR - Indexer Manager
@@ -142,7 +142,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - qbittorrent-config:/config
-      - media:/media
+      - media:/data
 
 ###############################################
 # FLARESOLVERR - Cloudflare Bypass
@@ -180,7 +180,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - jellyfin-config:/config
-      - media:/media:ro
+      - media:/data:ro
 
 ###############################################
 # Volumes
