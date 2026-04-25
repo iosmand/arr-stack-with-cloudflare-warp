@@ -88,6 +88,7 @@ cp example.env .env
 
 | Variable | Description |
 |----------|-------------|
+| `MEDIA_PATH` | Host path for shared media storage (bind-mounted as the `data` volume) |
 | `GID` | Group ID for GPU device access (used by Jellyfin for hardware transcoding) |
 
 **Find your GPU group ID:**
@@ -101,6 +102,16 @@ Set the `GID` value in your `.env` file:
 ```
 GID=109
 ```
+
+**Set your media path:**
+
+The `MEDIA_PATH` variable defines the host directory that is bind-mounted as the shared `data` volume. Set it to the absolute path where your media and downloads reside:
+
+```
+MEDIA_PATH=/mnt/shared/media
+```
+
+This `MEDIA_PATH` is referenced by the `data` volume in `compose.yaml`. Make sure the directory exists on the host before starting the stack.
 
 This `GID` is referenced by Jellyfin's `group_add` directive in `compose.yaml` via `${GID}`, granting the container access to `/dev/dri/renderD128` for hardware transcoding.
 
