@@ -78,9 +78,17 @@ All services share a common `/data` volume. Recommended structure:
     └── music/
 ```
 
-### Jellyfin Hardware Transcoding
+### Environment Variables
 
-Jellyfin is configured for GPU hardware transcoding using `/dev/dri/renderD128`.
+Copy `example.env` to `.env` and configure the values:
+
+```bash
+cp example.env .env
+```
+
+| Variable | Description |
+|----------|-------------|
+| `GID` | Group ID for GPU device access (used by Jellyfin for hardware transcoding) |
 
 **Find your GPU group ID:**
 
@@ -88,12 +96,17 @@ Jellyfin is configured for GPU hardware transcoding using `/dev/dri/renderD128`.
 stat -c '%g' /dev/dri/renderD128
 ```
 
-The compose file uses `group_add: video` which works for most systems. If transcoding fails, update the group ID:
+Set the `GID` value in your `.env` file:
 
-```yaml
-group_add:
-  - "YOUR_GID_HERE"  # e.g., "44" or "109"
 ```
+GID=109
+```
+
+This `GID` is referenced by Jellyfin's `group_add` directive in `compose.yaml` via `${GID}`, granting the container access to `/dev/dri/renderD128` for hardware transcoding.
+
+### Jellyfin Hardware Transcoding
+
+Jellyfin is configured for GPU hardware transcoding using `/dev/dri/renderD128`. The device group membership is handled via the `GID` environment variable — no manual edits to `compose.yaml` are needed. If transcoding fails, verify that the `GID` in your `.env` file matches the group owning `/dev/dri/renderD128`.
 
 ### Seerr Setup
 
@@ -188,12 +201,15 @@ docker exec cloudflare-warp warp-cli --accept-tos registration new
    docker exec jellyfin ls -la /dev/dri/
    ```
 
-2. Check group membership:
+2. Check the correct GID for your GPU device:
    ```bash
    stat -c '%g' /dev/dri/renderD128
    ```
 
-3. Update `group_add` with the correct GID
+3. Update the `GID` value in your `.env` file to match, then restart:
+   ```bash
+   docker compose up -d jellyfin
+   ```
 
 ### Services Can't Reach Each Other
 
