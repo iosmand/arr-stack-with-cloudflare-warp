@@ -7,10 +7,8 @@ LABEL description="Cloudflare WARP client running as non-registered (free) user"
 RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
-    lsb-release \
     ca-certificates \
     iproute2 \
-    iptables \
     dbus \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,9 +24,8 @@ RUN apt-get update && apt-get install -y \
 # Create necessary directories
 RUN mkdir -p /var/lib/cloudflare-warp
 
-# Copy entrypoint script and fix line endings (Windows CRLF -> Unix LF)
 COPY entrypoint.sh /entrypoint.sh
-RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Expose SOCKS5 proxy port (optional, for proxy mode)
 # EXPOSE 40000

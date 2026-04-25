@@ -17,10 +17,6 @@ dbus-daemon --system --fork
 # Start WARP daemon in background
 warp-svc &
 
-# Wait for daemon to be ready
-echo "Waiting for WARP daemon to start..."
-sleep 5
-
 # Wait for warp-cli to be able to connect to the daemon
 MAX_RETRIES=30
 RETRY_COUNT=0
