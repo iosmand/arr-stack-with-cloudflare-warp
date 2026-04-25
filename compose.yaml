@@ -23,6 +23,8 @@ x-warp-service: &warp-service
       max-file: "3"
   environment:
     TZ: Europe/Istanbul
+    PUID: "1111"
+    PGID: "1111"
   network_mode: "service:cloudflare-warp"
   depends_on:
     cloudflare-warp:
@@ -138,6 +140,9 @@ services:
     container_name: qbittorrent
     image: ghcr.io/hotio/qbittorrent:latest
     environment:
+      TZ: Europe/Istanbul
+      PUID: "1111"
+      PGID: "1111"
       WEBUI_PORT: 8080
       TORRENTING_PORT: 6881
     volumes:
@@ -153,8 +158,10 @@ services:
     container_name: flaresolverr
     image: ghcr.io/flaresolverr/flaresolverr:latest
     environment:
-      LOG_LEVEL: info
       TZ: Europe/Istanbul
+      PUID: "1111"
+      PGID: "1111"
+      LOG_LEVEL: info
 
 ###############################################
 # SEERR - Request Manager
