@@ -20,6 +20,8 @@ A complete media automation stack running through Cloudflare WARP VPN. All *arr 
 ## Quick Start
 
 ```bash
+cp example.env .env
+# Edit .env to set MEDIA_PATH and GID for your system
 docker compose up -d
 ```
 
@@ -243,7 +245,7 @@ All services share the WARP network. Use localhost for inter-service communicati
 | `qbittorrent-config` | qBittorrent configuration |
 | `jellyfin-config` | Jellyfin configuration |
 | `seerr-config` | Seerr configuration |
-| `data` | Shared media and downloads |
+| `data` | Shared media and downloads (bind-mounted from `MEDIA_PATH`) |
 
 ## Notes
 

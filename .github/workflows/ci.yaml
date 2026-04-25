@@ -8,12 +8,77 @@ on:
 
 jobs:
   validate-compose:
+    name: Validate Compose Configuration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate compose.yaml syntax (no env)
+        run: docker compose config --quiet 2>&1 || true
+
       - name: Copy example.env to .env
         run: cp example.env .env
 
-      - name: Validate docker compose config
-        run: docker compose config
+      - name: Validate docker compose config with default env
+        run: docker compose config --quiet
+
+      - name: Validate with custom MEDIA_PATH
+        run: MEDIA_PATH=/tmp/test-media docker compose config --quiet
+
+  check-no-hardcoded-paths:
+    name: Ensure No Hardcoded Host Paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No hardcoded /mnt/shared/media in compose.yaml
+        run: |
+          if grep -n '/mnt/shared/media' compose.yaml; then
+            echo "::error::Hardcoded path /mnt/shared/media found in compose.yaml"
+            exit 1
+          fi
+          echo "No hardcoded paths found in compose.yaml"
+
+  check-example-env:
+    name: Validate example.env Completeness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: MEDIA_PATH is defined in example.env
+        run: |
+          if ! grep -q '^MEDIA_PATH=' example.env; then
+            echo "::error::MEDIA_PATH variable missing from example.env"
+            exit 1
+          fi
+
+      - name: GID is defined in example.env
+        run: |
+          if ! grep -q '^GID=' example.env; then
+            echo "::error::GID variable missing from example.env"
+            exit 1
+          fi
+
+  check-compose-structure:
+    name: Validate Compose Volume Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: data volume references MEDIA_PATH
+        run: |
+          if ! grep -q 'device: \${MEDIA_PATH}' compose.yaml; then
+            echo "::error::data volume does not reference \${MEDIA_PATH} in compose.yaml"
+            exit 1
+          fi
+
+      - name: All expected services are defined
+        run: |
+          expected_services="cloudflare-warp radarr sonarr lidarr bazarr prowlarr qbittorrent flaresolverr seerr jellyfin"
+          for svc in $expected_services; do
+            if ! grep -q "^\s*${svc}:" compose.yaml; then
+              echo "::error::Service '${svc}' missing from compose.yaml"
+              exit 1
+            fi
+          done
+          echo "All expected services found in compose.yaml"
