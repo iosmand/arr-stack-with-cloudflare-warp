@@ -196,11 +196,7 @@ volumes:
   jellyfin-config:
   seerr-config:
   data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${MEDIA_PATH}
+    external: true
 
 ###############################################
 # ARR Stack Dedicated Network

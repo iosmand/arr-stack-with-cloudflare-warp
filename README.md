@@ -21,7 +21,8 @@ A complete media automation stack running through Cloudflare WARP VPN. All *arr 
 
 ```bash
 cp example.env .env
-# Edit .env to set MEDIA_PATH and GID for your system
+# Edit .env to set GID for your system
+docker volume create data
 docker compose up -d
 ```
 
@@ -66,7 +67,13 @@ After deployment, access services at:
 
 ### Data Volume Structure
 
-All services share a common `/data` volume. Recommended structure:
+All services share a common external `data` volume mounted at `/data`. This volume must be created once before the first start and is not removed by `docker compose down`:
+
+```bash
+docker volume create data
+```
+
+Recommended directory structure inside the volume:
 
 ```
 /data
@@ -80,6 +87,20 @@ All services share a common `/data` volume. Recommended structure:
     └── music/
 ```
 
+To seed the volume with existing files, run a disposable container that mounts it:
+
+```bash
+docker run --rm -v data:/data -v /path/on/host:/source alpine sh -c "cp -r /source/. /data/"
+```
+
+To find the volume's on-disk location:
+
+```bash
+docker volume inspect data --format '{{ .Mountpoint }}'
+```
+
+> **Note:** Because the volume is external, `docker compose down` will not remove it. To delete it, run `docker volume rm data` manually.
+
 ### Environment Variables
 
 Copy `example.env` to `.env` and configure the values:
@@ -90,7 +111,6 @@ cp example.env .env
 
 | Variable | Description |
 |----------|-------------|
-| `MEDIA_PATH` | Host path for shared media storage (bind-mounted as the `data` volume) |
 | `GID` | Group ID for GPU device access (used by Jellyfin for hardware transcoding) |
 
 **Find your GPU group ID:**
@@ -104,16 +124,6 @@ Set the `GID` value in your `.env` file:
 ```
 GID=109
 ```
-
-**Set your media path:**
-
-The `MEDIA_PATH` variable defines the host directory that is bind-mounted as the shared `data` volume. Set it to the absolute path where your media and downloads reside:
-
-```
-MEDIA_PATH=/mnt/shared/media
-```
-
-This `MEDIA_PATH` is referenced by the `data` volume in `compose.yaml`. Make sure the directory exists on the host before starting the stack.
 
 This `GID` is referenced by Jellyfin's `group_add` directive in `compose.yaml` via `${GID}`, granting the container access to `/dev/dri/renderD128` for hardware transcoding.
 
@@ -245,12 +255,13 @@ All services share the WARP network. Use localhost for inter-service communicati
 | `qbittorrent-config` | qBittorrent configuration |
 | `jellyfin-config` | Jellyfin configuration |
 | `seerr-config` | Seerr configuration |
-| `data` | Shared media and downloads (bind-mounted from `MEDIA_PATH`) |
+| `data` | Shared media and downloads (external volume) |
 
 ## Notes
 
 - WARP runs as a **non-registered (free) user**
 - Registration data persists in Docker volume to avoid re-registering on restart
 - All *arr services wait for WARP to be healthy before starting
+- The `data` volume is **external** — it must be created before the first `docker compose up` and is not removed by `docker compose down`
 - Jellyfin has read-only access to the data volume (`:ro`)
 - Port 7359/UDP is for Jellyfin auto-discovery on local network

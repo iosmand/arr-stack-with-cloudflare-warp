@@ -22,9 +22,6 @@ jobs:
       - name: Validate docker compose config with default env
         run: docker compose config --quiet
 
-      - name: Validate with custom MEDIA_PATH
-        run: MEDIA_PATH=/tmp/test-media docker compose config --quiet
-
   check-no-hardcoded-paths:
     name: Ensure No Hardcoded Host Paths
     runs-on: ubuntu-latest
@@ -45,13 +42,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: MEDIA_PATH is defined in example.env
-        run: |
-          if ! grep -q '^MEDIA_PATH=' example.env; then
-            echo "::error::MEDIA_PATH variable missing from example.env"
-            exit 1
-          fi
-
       - name: GID is defined in example.env
         run: |
           if ! grep -q '^GID=' example.env; then
@@ -65,10 +55,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: data volume references MEDIA_PATH
+      - name: data volume is defined
         run: |
-          if ! grep -q 'device: \${MEDIA_PATH}' compose.yaml; then
-            echo "::error::data volume does not reference \${MEDIA_PATH} in compose.yaml"
+          if ! grep -q '^\s*data:' compose.yaml; then
+            echo "::error::data volume not defined in compose.yaml"
             exit 1
           fi
 
