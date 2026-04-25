@@ -43,7 +43,7 @@ services:
       - net.ipv6.conf.all.disable_ipv6=0
       - net.ipv4.conf.all.src_valid_mark=1
     volumes:
-      - warp-data:/var/lib/cloudflare-warp
+      - warp-config:/var/lib/cloudflare-warp
     # All ports for services using WARP network must be exposed here
     ports:
       # Radarr
@@ -80,7 +80,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - radarr-config:/config
-      - data:/data
+      - media:/media
 
 ###############################################
 # SONARR - TV Shows
@@ -92,7 +92,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - sonarr-config:/config
-      - data:/data
+      - media:/media
 
 ###############################################
 # LIDARR - Music
@@ -104,7 +104,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - lidarr-config:/config
-      - data:/data
+      - media:/media
 
 ###############################################
 # BAZARR - Subtitles
@@ -116,7 +116,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - bazarr-config:/config
-      - data:/data
+      - media:/media
 
 ###############################################
 # PROWLARR - Indexer Manager
@@ -142,7 +142,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - qbittorrent-config:/config
-      - data:/data
+      - media:/media
 
 ###############################################
 # FLARESOLVERR - Cloudflare Bypass
@@ -180,13 +180,13 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - jellyfin-config:/config
-      - data:/data:ro
+      - media:/media:ro
 
 ###############################################
 # Volumes
 ###############################################
 volumes:
-  warp-data:  
+  warp-config:  
   radarr-config:
   sonarr-config:
   lidarr-config:
@@ -195,7 +195,7 @@ volumes:
   qbittorrent-config:
   jellyfin-config:
   seerr-config:
-  data:
+  media:
     external: true
 
 ###############################################
