@@ -14,6 +14,7 @@ A complete media automation stack running through Cloudflare WARP VPN. All *arr 
 | **Prowlarr** | 9696 | Indexer manager |
 | **qBittorrent** | 8080, 6881 | Torrent client |
 | **FlareSolverr** | 8191 | Cloudflare bypass proxy |
+| **Seerr** | 5055 | Request manager for movies and TV shows |
 | **Jellyfin** | 8096, 7359/udp | Media server with hardware transcoding |
 
 ## Quick Start
@@ -31,14 +32,14 @@ All services use `network_mode: "service:cloudflare-warp"` which routes their tr
 │                    Cloudflare WARP                      │
 │                    (VPN Gateway)                        │
 │  Exposed Ports: 7878, 8989, 8686, 6767, 9696,           │
-│                 8080, 6881, 8096, 7359, 8191            │
+│                 8080, 6881, 8096, 7359, 8191, 5055      │
 └──────────────────────┬──────────────────────────────────┘
                        │ network_mode: service:cloudflare-warp
-    ┌──────────┼──────────┼──────────┐
-    │          │          │          │       
-┌───▼───┐  ┌───▼───┐  ┌───▼───┐  ┌───▼────┐
-│Radarr │  │Sonarr │  │Lidarr │  │Bazarr  │
-└───────┘  └───────┘  └───────┘  └────────┘
+    ┌──────────┼──────────┼──────────┼───────────┐
+    │          │          │          │           │
+┌───▼───┐  ┌───▼───┐  ┌───▼───┐  ┌───▼────┐  ┌───▼────┐
+│Radarr │  │Sonarr │  │Lidarr │  │Bazarr  │  │ Seerr  │
+└───────┘  └───────┘  └───────┘  └────────┘  └────────┘
     │             │             │             │
 ┌───▼─────┐  ┌────▼────┐  ┌─────▼─────┐  ┌────▼─────┐
 │Prowlarr │  │qBittor. │  │FlareSolvrr│  │ Jellyfin │
@@ -56,6 +57,7 @@ After deployment, access services at:
 - **Prowlarr**: http://localhost:9696
 - **qBittorrent**: http://localhost:8080
 - **FlareSolverr**: http://localhost:8191
+- **Seerr**: http://localhost:5055
 - **Jellyfin**: http://localhost:8096
 
 ## Configuration
@@ -92,6 +94,15 @@ The compose file uses `group_add: video` which works for most systems. If transc
 group_add:
   - "YOUR_GID_HERE"  # e.g., "44" or "109"
 ```
+
+### Seerr Setup
+
+Seerr is a request management tool that allows users to request movies and TV shows. After starting the stack:
+
+1. Access Seerr at http://localhost:5055
+2. Complete the initial setup wizard
+3. Connect Seerr to your Radarr and Sonarr instances using `localhost:7878` and `localhost:8989` respectively
+4. Configure Jellyfin as the media server at `localhost:8096`
 
 ### Timezone
 
@@ -189,6 +200,8 @@ docker exec cloudflare-warp warp-cli --accept-tos registration new
 All services share the WARP network. Use localhost for inter-service communication:
 - Radarr → qBittorrent: `localhost:8080`
 - Prowlarr → FlareSolverr: `localhost:8191`
+- Seerr → Radarr: `localhost:7878`
+- Seerr → Sonarr: `localhost:8989`
 
 ## Volumes
 
@@ -202,6 +215,7 @@ All services share the WARP network. Use localhost for inter-service communicati
 | `prowlarr-config` | Prowlarr configuration |
 | `qbittorrent-config` | qBittorrent configuration |
 | `jellyfin-config` | Jellyfin configuration |
+| `seerr-config` | Seerr configuration |
 | `data` | Shared media and downloads |
 
 ## Notes

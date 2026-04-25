@@ -160,7 +160,6 @@ services:
 ###############################################
   seerr:
     <<: *warp-service
-    init: true
     container_name: seerr
     image: ghcr.io/hotio/seerr:latest
     volumes:
@@ -197,11 +196,6 @@ volumes:
   jellyfin-config:
   seerr-config:
   data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /mnt/shared/media
 
 ###############################################
 # ARR Stack Dedicated Network
