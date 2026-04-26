@@ -27,8 +27,6 @@ services:
         max-file: "3"
     environment:
       TZ: Europe/Istanbul
-      PUID: "1111"
-      PGID: "1111"
     build: ./cloudflare-warp
     container_name: cloudflare-warp
     cap_add:
@@ -63,8 +61,6 @@ services:
       - 8191:8191
       # Seerr
       - 5055:5055
-    networks:
-      - arr_network
 
 ###############################################
 # RADARR - Movies
@@ -172,8 +168,6 @@ services:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     environment:
       TZ: Europe/Istanbul
-      PUID: "1111"
-      PGID: "1111"
       LOG_LEVEL: info
 
 ###############################################
@@ -202,8 +196,6 @@ services:
     image: jellyfin/jellyfin:latest
     environment:
       TZ: Europe/Istanbul
-      PUID: "1111"
-      PGID: "1111"
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
     volumes:
@@ -226,10 +218,3 @@ volumes:
   seerr-config:
   media:
     external: true
-
-###############################################
-# ARR Stack Dedicated Network
-###############################################
-networks:
-  arr_network:
-    name: arr_network

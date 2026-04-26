@@ -1,73 +1,156 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Configuration via environment variables
-WARP_MODE=${WARP_MODE:-"warp"}  # Options: warp, doh, warp+doh, dot, warp+dot, proxy
+WARP_MODE=${WARP_MODE:-"warp"}
 WARP_LISTEN_PORT=${WARP_LISTEN_PORT:-40000}
+MAX_CONSECUTIVE_FAILURES=5
+
+WARP_PID=""
+CONSECUTIVE_FAILURES=0
 
 echo "Starting Cloudflare WARP..."
 
-# Start dbus (required for warp-svc)
-if [ ! -d /run/dbus ]; then
-    mkdir -p /run/dbus
-fi
-rm -f /run/dbus/pid
-dbus-daemon --system --fork
+cleanup() {
+    echo "Shutting down warp-svc..."
+    if [ -n "$WARP_PID" ] && kill -0 "$WARP_PID" 2>/dev/null; then
+        kill "$WARP_PID" 2>/dev/null || true
+        for i in $(seq 1 10); do
+            kill -0 "$WARP_PID" 2>/dev/null || break
+            sleep 1
+        done
+        kill -0 "$WARP_PID" 2>/dev/null && kill -9 "$WARP_PID" 2>/dev/null || true
+        wait "$WARP_PID" 2>/dev/null || true
+    fi
+    exit 0
+}
+trap cleanup SIGTERM SIGINT
 
-# Start WARP daemon in background
-warp-svc &
-
-# Wait for warp-cli to be able to connect to the daemon
-MAX_RETRIES=30
-RETRY_COUNT=0
-while ! warp-cli --accept-tos status &>/dev/null; do
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-        echo "ERROR: WARP daemon failed to start after $MAX_RETRIES attempts"
+init_dbus() {
+    if [ ! -d /run/dbus ]; then
+        mkdir -p /run/dbus
+    fi
+    rm -f /run/dbus/pid
+    if ! dbus-daemon --system --fork; then
+        echo "FATAL: Failed to start dbus-daemon"
         exit 1
     fi
-    echo "Waiting for WARP daemon... (attempt $RETRY_COUNT/$MAX_RETRIES)"
-    sleep 2
-done
+}
 
-echo "WARP daemon is ready"
+wait_for_daemon() {
+    local retries=0
+    local max_retries=30
+    while ! warp-cli --accept-tos status &>/dev/null; do
+        retries=$((retries + 1))
+        if [ "$retries" -ge "$max_retries" ]; then
+            echo "ERROR: WARP daemon failed to become ready after $max_retries attempts"
+            return 1
+        fi
+        if ! kill -0 "$WARP_PID" 2>/dev/null; then
+            echo "ERROR: warp-svc process died while waiting"
+            return 1
+        fi
+        echo "Waiting for WARP daemon... (attempt $retries/$max_retries)"
+        sleep 2
+    done
+    return 0
+}
 
-# Check if already registered
-if ! warp-cli --accept-tos registration show &>/dev/null; then
-    echo "Registering as non-registered (free) user..."
-    warp-cli --accept-tos registration new
-else
-    echo "Already registered"
-fi
-
-# Set WARP mode
-echo "Setting WARP mode to: $WARP_MODE"
-warp-cli --accept-tos mode "$WARP_MODE"
-
-# If proxy mode, set the listen port
-if [ "$WARP_MODE" = "proxy" ]; then
-    echo "Setting proxy listen port to: $WARP_LISTEN_PORT"
-    warp-cli --accept-tos proxy port "$WARP_LISTEN_PORT"
-fi
-
-# Connect to WARP
-echo "Connecting to Cloudflare WARP..."
-warp-cli --accept-tos connect
-
-# Wait for connection
-sleep 3
-
-# Show status
-echo "=== WARP Status ==="
-warp-cli --accept-tos status
-echo "==================="
-
-# Keep container running and monitor connection
-echo "WARP is running. Monitoring connection..."
-while true; do
-    if ! warp-cli --accept-tos status | grep -q "Connected"; then
-        echo "Connection lost, attempting to reconnect..."
-        warp-cli --accept-tos connect
+register_if_needed() {
+    if ! warp-cli --accept-tos registration show &>/dev/null; then
+        echo "Registering as non-registered (free) user..."
+        warp-cli --accept-tos registration new
+    else
+        echo "Already registered"
     fi
-    sleep 30
+}
+
+configure_and_connect() {
+    echo "Setting WARP mode to: $WARP_MODE"
+    if ! warp-cli --accept-tos mode "$WARP_MODE"; then
+        echo "ERROR: Failed to set WARP mode"
+        return 1
+    fi
+
+    if [ "$WARP_MODE" = "proxy" ]; then
+        echo "Setting proxy listen port to: $WARP_LISTEN_PORT"
+        if ! warp-cli --accept-tos proxy port "$WARP_LISTEN_PORT"; then
+            echo "ERROR: Failed to set proxy port"
+            return 1
+        fi
+    fi
+
+    echo "Connecting to Cloudflare WARP..."
+    warp-cli --accept-tos connect || true
+
+    echo "=== WARP Status ==="
+    warp-cli --accept-tos status
+    echo "==================="
+
+    return 0
+}
+
+start_warp_svc() {
+    warp-svc &
+    WARP_PID=$!
+    echo "warp-svc started with PID $WARP_PID"
+}
+
+full_startup() {
+    start_warp_svc
+
+    if ! wait_for_daemon; then
+        return 1
+    fi
+
+    register_if_needed
+
+    if ! configure_and_connect; then
+        return 1
+    fi
+
+    CONSECUTIVE_FAILURES=0
+    return 0
+}
+
+init_dbus
+
+if ! full_startup; then
+    echo "FATAL: Initial WARP startup failed"
+    exit 1
+fi
+
+echo "WARP is running. Monitoring connection..."
+
+while true; do
+    if ! kill -0 "$WARP_PID" 2>/dev/null; then
+        echo "WARNING: warp-svc process (PID $WARP_PID) has died. Restarting daemon..."
+        if ! full_startup; then
+            echo "FATAL: Failed to restart warp-svc. Exiting."
+            exit 1
+        fi
+        continue
+    fi
+
+    STATUS=$(warp-cli --accept-tos status 2>&1 || true)
+    if echo "$STATUS" | grep -q "Connected"; then
+        CONSECUTIVE_FAILURES=0
+    else
+        CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
+        echo "Connection check failed ($CONSECUTIVE_FAILURES/$MAX_CONSECUTIVE_FAILURES). Status: $STATUS"
+
+        if echo "$STATUS" | grep -qE "Disconnected|Unable|Error|timeout"; then
+            echo "Attempting to reconnect..."
+            warp-cli --accept-tos connect 2>&1 || true
+        fi
+
+        if [ "$CONSECUTIVE_FAILURES" -ge "$MAX_CONSECUTIVE_FAILURES" ]; then
+            echo "WARNING: WARP disconnected for too long. Restarting daemon..."
+            if ! full_startup; then
+                echo "FATAL: Failed to restart warp-svc. Exiting."
+                exit 1
+            fi
+        fi
+    fi
+
+    sleep $((25 + RANDOM % 10))
 done

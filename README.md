@@ -21,8 +21,8 @@ A complete media automation stack running through Cloudflare WARP VPN. All *arr 
 
 ```bash
 cp example.env .env
-# Edit .env to set GID for your system
-docker volume create data
+# Edit .env to set GID for your system (see Jellyfin Hardware Transcoding below)
+docker volume create media
 docker compose up -d
 ```
 
@@ -67,10 +67,10 @@ After deployment, access services at:
 
 ### Data Volume Structure
 
-All services share a common external `data` volume mounted at `/data`. This volume must be created once before the first start and is not removed by `docker compose down`:
+All services share a common external `media` volume mounted at `/data`. This volume must be created once before the first start and is not removed by `docker compose down`:
 
 ```bash
-docker volume create data
+docker volume create media
 ```
 
 Recommended directory structure inside the volume:
@@ -90,16 +90,16 @@ Recommended directory structure inside the volume:
 To seed the volume with existing files, run a disposable container that mounts it:
 
 ```bash
-docker run --rm -v data:/data -v /path/on/host:/source alpine sh -c "cp -r /source/. /data/"
+docker run --rm -v media:/data -v /path/on/host:/source alpine sh -c "cp -r /source/. /data/"
 ```
 
 To find the volume's on-disk location:
 
 ```bash
-docker volume inspect data --format '{{ .Mountpoint }}'
+docker volume inspect media --format '{{ .Mountpoint }}'
 ```
 
-> **Note:** Because the volume is external, `docker compose down` will not remove it. To delete it, run `docker volume rm data` manually.
+> **Note:** Because the volume is external, `docker compose down` will not remove it. To delete it, run `docker volume rm media` manually.
 
 ### Environment Variables
 
@@ -142,13 +142,7 @@ Seerr is a request management tool that allows users to request movies and TV sh
 
 ### Timezone
 
-All services use `Europe/Istanbul` timezone. Change in the common environment:
-
-```yaml
-x-common-keys: &common-keys
-  environment: &common-env
-    TZ: Your/Timezone
-```
+All services use `Europe/Istanbul` timezone. To change it, update the `TZ` value in the `environment:` block of each service in `compose.yaml`.
 
 ## WARP Configuration
 
@@ -246,22 +240,24 @@ All services share the WARP network. Use localhost for inter-service communicati
 
 | Volume | Purpose |
 |--------|---------|
-| `warp-data` | WARP registration data |
+| `warp-config` | WARP registration data |
 | `radarr-config` | Radarr configuration |
 | `sonarr-config` | Sonarr configuration |
 | `lidarr-config` | Lidarr configuration |
 | `bazarr-config` | Bazarr configuration |
 | `prowlarr-config` | Prowlarr configuration |
 | `qbittorrent-config` | qBittorrent configuration |
+| `flaresolverr-config` | FlareSolverr configuration |
 | `jellyfin-config` | Jellyfin configuration |
 | `seerr-config` | Seerr configuration |
-| `data` | Shared media and downloads (external volume) |
+| `media` | Shared media and downloads (external volume) |
 
 ## Notes
 
 - WARP runs as a **non-registered (free) user**
 - Registration data persists in Docker volume to avoid re-registering on restart
 - All *arr services wait for WARP to be healthy before starting
-- The `data` volume is **external** — it must be created before the first `docker compose up` and is not removed by `docker compose down`
+- The `media` volume is **external** — it must be created before the first `docker compose up` and is not removed by `docker compose down`
 - Jellyfin has read-only access to the data volume (`:ro`)
 - Port 7359/UDP is for Jellyfin auto-discovery on local network
+- The WARP entrypoint monitors the daemon and restarts it in-place on failures, preserving the shared network namespace for dependent services

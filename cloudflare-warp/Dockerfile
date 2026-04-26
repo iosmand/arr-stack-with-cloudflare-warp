@@ -31,7 +31,7 @@ RUN chmod +x /entrypoint.sh
 # EXPOSE 40000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
     CMD warp-cli --accept-tos status | grep -q "Connected" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

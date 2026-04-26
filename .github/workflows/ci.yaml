@@ -55,10 +55,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: data volume is defined
+      - name: media volume is defined
         run: |
-          if ! grep -q '^\s*data:' compose.yaml; then
-            echo "::error::data volume not defined in compose.yaml"
+          if ! grep -q '^\s*media:' compose.yaml; then
+            echo "::error::media volume not defined in compose.yaml"
+            exit 1
+          fi
+
+      - name: flaresolverr-config volume is defined
+        run: |
+          if ! grep -q '^\s*flaresolverr-config:' compose.yaml; then
+            echo "::error::flaresolverr-config volume not defined in compose.yaml"
             exit 1
           fi
 
